@@ -2,25 +2,57 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Labyrint Bot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background-color: #222;
+            color: white;
+        }
+        button {
+            padding: 20px 40px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        #status {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
 </head>
 <body>
     <h1>Labyrint Bot</h1>
     <button id="startButton">Starta sensorer</button>
+    <div id="status">Status: Ej ansluten</div>
 
     <script>
+        const statusDiv = document.getElementById('status');
         const ws = new WebSocket('ws://192.168.0.16:8765');
 
         ws.onopen = () => {
             console.log("Ansluten till Python-servern!");
+            statusDiv.innerText = "Status: Ansluten till datorn!";
+            statusDiv.style.color = "#4CAF50";
         };
 
         ws.onclose = () => {
             console.log("Anslutningen bröts.");
+            statusDiv.innerText = "Status: Anslutningen bröts!";
+            statusDiv.style.color = "#ff4444";
         };
 
         ws.onerror = (error) => {
             console.error("WebSocket-fel:", error);
+            statusDiv.innerText = "Status: Fel vid anslutning (Kolla IP/brandvägg)";
+            statusDiv.style.color = "#ff4444";
         };
 
         function handleOrientation(event) {
@@ -36,25 +68,25 @@
         }
 
         const startButton = document.getElementById('startButton');
-        if (startButton) {
-            startButton.addEventListener('click', () => {
-                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    DeviceOrientationEvent.requestPermission()
-                        .then(permissionState => {
-                            if (permissionState === 'granted') {
-                                window.addEventListener('deviceorientation', handleOrientation);
-                                console.log("Rörelsesensorer aktiverade!");
-                            } else {
-                                alert("Behöver tillgång till rörelsesensorer för att funka.");
-                            }
-                        })
-                        .catch(console.error);
-                } else {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                    console.log("Rörelsesensorer lyssnar direkt.");
-                }
-            });
-        }
+        startButton.addEventListener('click', () => {
+            // Kontrollera om enheten kräver tillstånd (t.ex. iOS / Safari)
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                            statusDiv.innerText = "Status: Sensorer aktiverade!";
+                        } else {
+                            alert("Du måste godkänna tillgång till rörelsesensorer.");
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Android och andra webbläsare som inte kräver explicit permission-popups
+                window.addEventListener('deviceorientation', handleOrientation);
+                statusDiv.innerText = "Status: Lyssnar på sensorer!";
+            }
+        });
     </script>
 </body>
 </html>
