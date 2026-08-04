@@ -1,50 +1,60 @@
-// Anslut till Python-servern via datorns lokala IP-adress
-const ws = new WebSocket('ws://192.168.0.16:8765');
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Labyrint Bot</title>
+</head>
+<body>
+    <h1>Labyrint Bot</h1>
+    <button id="startButton">Starta sensorer</button>
 
-ws.onopen = () => {
-    console.log("Ansluten till Python-servern!");
-};
+    <script>
+        const ws = new WebSocket('ws://192.168.0.16:8765');
 
-ws.onclose = () => {
-    console.log("Anslutningen bröts.");
-};
+        ws.onopen = () => {
+            console.log("Ansluten till Python-servern!");
+        };
 
-ws.onerror = (error) => {
-    console.error("WebSocket-fel:", error);
-};
+        ws.onclose = () => {
+            console.log("Anslutningen bröts.");
+        };
 
-// Funktion för att hantera rörelsedata från telefonens gyro
-function handleOrientation(event) {
-    const data = {
-        alpha: event.alpha, // Rotation kring z-axeln
-        beta: event.beta,   // Lutning framåt/bakåt (x-axeln)
-        gamma: event.gamma  // Lutning åt sidorna (y-axeln)
-    };
+        ws.onerror = (error) => {
+            console.error("WebSocket-fel:", error);
+        };
 
-    // Skicka datan till Python-servern om anslutningen är öppen
-    if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(data));
-    }
-}
+        function handleOrientation(event) {
+            const data = {
+                alpha: event.alpha,
+                beta: event.beta,
+                gamma: event.gamma
+            };
 
-// Startknapp för att begära tillgång till sensorer (krävs på nya mobiler)
-const startButton = document.getElementById('startButton');
-if (startButton) {
-    startButton.addEventListener('click', () => {
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation);
-                        console.log("Rörelsesensorer aktiverade!");
-                    } else {
-                        alert("Behöver tillgång till rörelsesensorer för att funka.");
-                    }
-                })
-                .catch(console.error);
-        } else {
-            window.addEventListener('deviceorientation', handleOrientation);
-            console.log("Rörelsesensorer lyssnar direkt.");
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+            }
         }
-    });
-}
+
+        const startButton = document.getElementById('startButton');
+        if (startButton) {
+            startButton.addEventListener('click', () => {
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    DeviceOrientationEvent.requestPermission()
+                        .then(permissionState => {
+                            if (permissionState === 'granted') {
+                                window.addEventListener('deviceorientation', handleOrientation);
+                                console.log("Rörelsesensorer aktiverade!");
+                            } else {
+                                alert("Behöver tillgång till rörelsesensorer för att funka.");
+                            }
+                        })
+                        .catch(console.error);
+                } else {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    console.log("Rörelsesensorer lyssnar direkt.");
+                }
+            });
+        }
+    </script>
+</body>
+</html>
