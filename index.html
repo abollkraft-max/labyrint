@@ -1,44 +1,50 @@
-<!DOCTYPE html>
-<html lang="sv">
-<head>
-    <meta charset="UTF-8">
-    <title>Labyrint Styrning</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="text-align: center; font-family: sans-serif; padding-top: 50px;">
-    <h1>Labyrint Controller</h1>
-    <button id="startButton" style="padding: 20px 40px; font-size: 20px;">Godkänn & Starta</button>
-    <p>Status: <span id="status">Väntar på anslutning...</span></p>
+// Anslut till Python-servern via datorns lokala IP-adress
+const ws = new WebSocket('ws://192.168.0.16:8765');
 
-    <script>
-        const ws = new WebSocket('ws://192.168.0.16:8765');
+ws.onopen = () => {
+    console.log("Ansluten till Python-servern!");
+};
 
-        ws.onopen = () => {
-            document.getElementById('status').innerText = 'Ansluten till datorn!';
-        };
+ws.onclose = () => {
+    console.log("Anslutningen bröts.");
+};
 
-        document.getElementById('startButton').addEventListener('click', async () => {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                const response = await DeviceOrientationEvent.requestPermission();
-                if (response !== 'granted') {
-                    alert('Tillstånd nekades!');
-                    return;
-                }
-            }
+ws.onerror = (error) => {
+    console.error("WebSocket-fel:", error);
+};
 
-            document.getElementById('status').innerText = 'Rörelsesensorer aktiva!';
+// Funktion för att hantera rörelsedata från telefonens gyro
+function handleOrientation(event) {
+    const data = {
+        alpha: event.alpha, // Rotation kring z-axeln
+        beta: event.beta,   // Lutning framåt/bakåt (x-axeln)
+        gamma: event.gamma  // Lutning åt sidorna (y-axeln)
+    };
 
-            window.addEventListener('deviceorientation', (event) => {
-                const data = {
-                    beta: event.beta,   
-                    gamma: event.gamma  
-                };
-                
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify(data));
-                }
-            });
-        });
-    </script>
-</body>
-</html>
+    // Skicka datan till Python-servern om anslutningen är öppen
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(data));
+    }
+}
+
+// Startknapp för att begära tillgång till sensorer (krävs på nya mobiler)
+const startButton = document.getElementById('startButton');
+if (startButton) {
+    startButton.addEventListener('click', () => {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        console.log("Rörelsesensorer aktiverade!");
+                    } else {
+                        alert("Behöver tillgång till rörelsesensorer för att funka.");
+                    }
+                })
+                .catch(console.error);
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+            console.log("Rörelsesensorer lyssnar direkt.");
+        }
+    });
+}
