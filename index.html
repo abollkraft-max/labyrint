@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Labyrint Styrning</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="text-align: center; font-family: sans-serif; padding-top: 50px;">
+    <h1>Labyrint Controller</h1>
+    <button id="startButton" style="padding: 20px 40px; font-size: 20px;">Godkänn & Starta</button>
+    <p>Status: <span id="status">Väntar på anslutning...</span></p>
+
+    <script>
+        const ws = new WebSocket('ws://192.168.0.16:8765');
+
+        ws.onopen = () => {
+            document.getElementById('status').innerText = 'Ansluten till datorn!';
+        };
+
+        document.getElementById('startButton').addEventListener('click', async () => {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                const response = await DeviceOrientationEvent.requestPermission();
+                if (response !== 'granted') {
+                    alert('Tillstånd nekades!');
+                    return;
+                }
+            }
+
+            document.getElementById('status').innerText = 'Rörelsesensorer aktiva!';
+
+            window.addEventListener('deviceorientation', (event) => {
+                const data = {
+                    beta: event.beta,   
+                    gamma: event.gamma  
+                };
+                
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(data));
+                }
+            });
+        });
+    </script>
+</body>
+</html>
